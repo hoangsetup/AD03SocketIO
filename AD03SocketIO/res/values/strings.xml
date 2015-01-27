@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Ad03SocketIO</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+	<string name="app_id_bk">630355827068581</string>
+	<string name="app_id">1505303586383700</string>
+	<string name="hind_email">yourname@email.com</string>
+	<string name="hind_password">password</string>
+	<string name="str_remember_me">Remember me</string>
+	<string name="str_signin">Sign In</string>
+	<string name="str_sign_in_to_your_account">Sign in to your account</string>
+	<string name="des_imgfb">imgfb</string>
+	<string name="des_imggg">imggg</string>
+	<string name="des_imgtt">imgtt</string>
+	<string name="str_titlemain">Danh sách phòng chat</string>
+	<string name="string_more">More...</string>
+</resources>

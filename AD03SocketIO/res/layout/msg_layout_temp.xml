@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_temp_msg"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp" >
+
+    <TextView
+        android:id="@+id/TextView_rec"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:layout_marginRight="32dp"
+        android:layout_marginTop="2dp"
+        android:background="@drawable/msg_radius_rec"
+        android:gravity="center_vertical"
+        android:minHeight="32dp"
+        android:text="What are you doing?"
+        android:textColor="#FFF" />
+
+    <TextView
+        android:id="@+id/textView_sen"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:layout_marginBottom="4dp"
+        android:layout_marginLeft="32dp"
+        android:layout_marginTop="2dp"
+        android:background="@drawable/msg_radius_sen"
+        android:gravity="center_vertical"
+        android:minHeight="32dp"
+        android:text="Hi! I&apos;m doing my homework."
+        android:textColor="#FFF" />
+
+</LinearLayout>
