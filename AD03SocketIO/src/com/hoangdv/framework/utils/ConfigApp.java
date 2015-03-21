@@ -5,7 +5,7 @@ import org.json.JSONObject;
 import android.widget.TextView;
 
 public class ConfigApp {
-	public static String IP_SERVER_CHAT = "10.0.3.2";
+	public static String IP_SERVER_CHAT = "http://dev.lophocmoi.com:5555";
 	public static int PORT_SERVER_CHAR = 8080;
 
 	// public static String USER_NAME = "admin";
@@ -18,7 +18,13 @@ public class ConfigApp {
 	public static boolean goOut = false;
 	public static int msg_count = -1;
 
+	// Thong tin nguoi dung dang dang nhap
 	public static JSONObject CURRENT_USER = new JSONObject();
+
+	// Thong tin phong co ban, link file video, tin nhan cu
+	public static JSONObject CURRENT_ROOM_DEFAULT = new JSONObject();
+	public static String CURRENT_ROOM_ID;
+
 	//
 	public static String API_KEY = "72559437c0ef26f4d7a276684ce0ebbd";
 	// public static String SERVER_ADD = "http://108.61.184.234";
@@ -27,6 +33,8 @@ public class ConfigApp {
 	public static String URL_LOGIN = SERVER_ADD + "/service/v1/login";
 	public static String URL_LOGIN_OPENID = SERVER_ADD + "/service/v1/openid";
 	public static String URL_GETROOMDATA = SERVER_ADD + "/service/v1/get_rooms";
+	public static String URL_GET_LINKVIDEO_MSG = SERVER_ADD
+			+ "/service/v1/room";
 
 	// Key in API
 	public static String PROFILE_KEY = "profile";

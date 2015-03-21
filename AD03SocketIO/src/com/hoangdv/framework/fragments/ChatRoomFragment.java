@@ -1,47 +1,84 @@
 package com.hoangdv.framework.fragments;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import io.vov.vitamio.utils.Log;
 
+import java.net.URISyntaxException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Vector;
+
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.annotation.SuppressLint;
 import android.app.Fragment;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
-import android.util.TypedValue;
-import android.view.Gravity;
+import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
+import android.widget.ListView;
+import android.widget.TabHost;
+import android.widget.TabWidget;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Response.ErrorListener;
+import com.android.volley.Response.Listener;
+import com.android.volley.VolleyError;
+import com.github.nkzawa.emitter.Emitter;
+import com.github.nkzawa.engineio.client.Transport;
+import com.github.nkzawa.socketio.client.IO;
+import com.github.nkzawa.socketio.client.Manager;
+import com.github.nkzawa.socketio.client.Socket;
 import com.hoangdv.framework.R;
+import com.hoangdv.framework.ReplyActivity;
+import com.hoangdv.framework.adapters.MessageAdapter;
+import com.hoangdv.framework.app.AppController;
+import com.hoangdv.framework.models.MessageItem;
 import com.hoangdv.framework.utils.ConfigApp;
+import com.hoangdv.framework.utils.CustomRequest;
 
 @SuppressLint("NewApi")
 public class ChatRoomFragment extends Fragment {
-	// TextView tv_msg_rec, tv_msg_sen;
-	LinearLayout layout_logchat;
-	ScrollView scrollView_logchat;
-	ImageButton imageButton_send;
-	EditText editText_msg;
+	private View rootView;
 
-	TextView tv_msg_sen, tv_msg_rec;
-	// int ConfigApp.msg_count = -1;
+	// = 0 - Thao luan, =1 - Chu phong
+	public static int room_type = 0;
+	private Vector<MessageItem> messageItems_global = new Vector<MessageItem>();
+	private Vector<MessageItem> messageItems_owner = new Vector<MessageItem>();
+	private ListView listViewChatLog_global;
+	private ListView listViewChatLog_owner;
 
-	public static ChatClientThread chatClientThread = null;
+	private MessageAdapter adapter_global = null;
+	private MessageAdapter adapter_owner = null;
+
+	// textedit msg
+	private EditText inputMsgGlobal, inputMsgOwner;
+	private ImageButton buttonSendGlobal, buttonSendOwner;
+
+	// Socket
+	private Socket socket;
+	{
+		try {
+			socket = IO.socket(ConfigApp.IP_SERVER_CHAT);
+		} catch (URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	public ChatRoomFragment() {
 	}
@@ -50,267 +87,384 @@ public class ChatRoomFragment extends Fragment {
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 
-		View rootView = inflater.inflate(R.layout.fragment_chatroom, container,
+		rootView = inflater.inflate(R.layout.fragment_chatroom, container,
 				false);
-		View tempView = inflater.inflate(R.layout.msg_layout_temp, null);
 
-		layout_logchat = (LinearLayout) rootView
-				.findViewById(R.id.layout_logchat);
-		scrollView_logchat = (ScrollView) rootView
-				.findViewById(R.id.scrollView_logchat);
-		imageButton_send = (ImageButton) rootView
-				.findViewById(R.id.imageButton_send);
-		editText_msg = (EditText) rootView.findViewById(R.id.editText_msg);
-		scrollView_logchat.post(new Runnable() {
+		initTab();
+		getInitWidgetControl();
+		// getMsgInJsonGlobal();
+		getRoomInfo();
+		listenerEvent();
 
-			@Override
-			public void run() {
-				// TODO Auto-generated method stub
-				scrollView_logchat.fullScroll(ScrollView.FOCUS_DOWN);
-			}
-		});
-		imageButton_send.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View arg0) {
-				// TODO Auto-generated method stub
-				String msg = editText_msg.getText().toString();
-				if (!TextUtils.isEmpty(msg)) {
-					chatClientThread.sendMsg(msg);
-					editText_msg.setText("");
-					sendMessageToView(msg);
-				} else {
-					editText_msg.setError("SPAM!");
-				}
-			}
-		});
-
-		tv_msg_sen = (TextView) tempView.findViewById(R.id.textView_sen);
-		tv_msg_rec = (TextView) tempView.findViewById(R.id.TextView_rec);
-		try {
-			ConfigApp.goOut = false;
-			// ParseUser user = ParseUser.getCurrentUser();
-			JSONObject jsonObject = ConfigApp.CURRENT_USER
-					.getJSONObject(ConfigApp.PROFILE_KEY);
-			if (chatClientThread == null) {
-				chatClientThread = new ChatClientThread(
-						jsonObject.getString(ConfigApp.USERNAME_KEY),
-						ConfigApp.IP_SERVER_CHAT, ConfigApp.PORT_SERVER_CHAR);
-				// chatClientThread.start();
-			} else {
-				chatClientThread.interrupt();
-				chatClientThread = null;
-				chatClientThread = new ChatClientThread(ConfigApp.USERNAME_KEY,
-						ConfigApp.IP_SERVER_CHAT, ConfigApp.PORT_SERVER_CHAR);
-				// chatClientThread.start();
-			}
-
-		} catch (Exception ex) {
-			Toast.makeText(getActivity(),
-					"Khong the ket noi may chu!\n" + ex.toString(),
-					Toast.LENGTH_SHORT).show();
-		}
-
-		// layout_logchat.removeAllViews();
-		for (int i = 0; i < ConfigApp.msg_count; i++) {
-			ViewGroup parent = (ViewGroup) ConfigApp.arr_textViews[i]
-					.getParent();
-			parent.removeView(ConfigApp.arr_textViews[i]);
-			layout_logchat.addView(ConfigApp.arr_textViews[i]);
-		}
+		//
+		initSocketIoClient();
 		return rootView;
 	}
 
-	public void sendMessageToView(String msg) {
-		ConfigApp.msg_count++;
-		ConfigApp.arr_textViews[ConfigApp.msg_count] = new TextView(
-				getActivity());
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setLayoutParams(tv_msg_sen
-				.getLayoutParams());
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setText(msg);
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setBackground(tv_msg_sen
-				.getBackground());
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setTextColor(Color.WHITE);
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setSingleLine(false);
-		ConfigApp.arr_textViews[ConfigApp.msg_count]
-				.setGravity(Gravity.CENTER_VERTICAL);
-		int minHeight = (int) TypedValue.applyDimension(
-				TypedValue.COMPLEX_UNIT_SP, 32, getResources()
-						.getDisplayMetrics());
-		ConfigApp.arr_textViews[ConfigApp.msg_count]
-				.setMinimumHeight(minHeight);
+	private void getInitWidgetControl() {
+		listViewChatLog_global = (ListView) rootView
+				.findViewById(R.id.listView_chat_global);
+		listViewChatLog_owner = (ListView) rootView
+				.findViewById(R.id.listView_chat_owner);
+		adapter_global = new MessageAdapter(getActivity(), messageItems_global);
+		adapter_owner = new MessageAdapter(getActivity(), messageItems_owner);
+		listViewChatLog_global.setAdapter(adapter_global);
+		listViewChatLog_owner.setAdapter(adapter_owner);
 
-		layout_logchat.addView(ConfigApp.arr_textViews[ConfigApp.msg_count]);
+		inputMsgGlobal = (EditText) rootView
+				.findViewById(R.id.editText_msg_global);
+		inputMsgOwner = (EditText) rootView
+				.findViewById(R.id.editText_msg_owner);
 
-		scrollView_logchat.post(new Runnable() {
+		buttonSendGlobal = (ImageButton) rootView
+				.findViewById(R.id.imageButton_send_global);
+		buttonSendOwner = (ImageButton) rootView
+				.findViewById(R.id.imageButton_send_owner);
+	}
+
+	private void listenerEvent() {
+		buttonSendGlobal.setOnClickListener(new View.OnClickListener() {
 
 			@Override
-			public void run() {
+			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				scrollView_logchat.fullScroll(ScrollView.FOCUS_DOWN);
+				attemptSendGlobal();
+			}
+		});
+		buttonSendOwner.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+
 			}
 		});
 
+		listViewChatLog_global
+				.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+					@Override
+					public boolean onItemLongClick(AdapterView<?> arg0,
+							View arg1, int arg2, long arg3) {
+						// TODO Auto-generated method stub
+						Intent intent = new Intent(getActivity(), ReplyActivity.class);
+						MessageItem itemT = messageItems_global.elementAt(arg2);
+						Bundle bundle = new Bundle();
+						bundle.putSerializable("msg", itemT);
+						intent.putExtra("bundle", bundle);
+						startActivityForResult(intent, 113);
+						return false;
+					}
+				});
+
+		listViewChatLog_owner
+				.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+					@Override
+					public boolean onItemLongClick(AdapterView<?> arg0,
+							View arg1, int arg2, long arg3) {
+						// TODO Auto-generated method stub
+						return false;
+					}
+				});
 	}
 
-	public void receiveMessageToView(String msg) {
-		ConfigApp.msg_count++;
-		ConfigApp.arr_textViews[ConfigApp.msg_count] = new TextView(
-				getActivity());
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setLayoutParams(tv_msg_rec
-				.getLayoutParams());
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setText(msg);
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setBackground(tv_msg_rec
-				.getBackground());
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setTextColor(Color.WHITE);
-		ConfigApp.arr_textViews[ConfigApp.msg_count].setSingleLine(false);
-		ConfigApp.arr_textViews[ConfigApp.msg_count]
-				.setGravity(Gravity.CENTER_VERTICAL);
-		int minHeight = (int) TypedValue.applyDimension(
-				TypedValue.COMPLEX_UNIT_SP, 32, getResources()
-						.getDisplayMetrics());
-		ConfigApp.arr_textViews[ConfigApp.msg_count]
-				.setMinimumHeight(minHeight);
+	private void getRoomInfo() {
+		try {
+			JSONObject userProfile = ConfigApp.CURRENT_USER
+					.getJSONObject("profile");
+			CustomRequest request = new CustomRequest(
+					ConfigApp.URL_GET_LINKVIDEO_MSG + "/"
+							+ ConfigApp.CURRENT_ROOM_ID + "/"
+							+ userProfile.getString("id"), null,
+					new Listener<JSONObject>() {
+						@Override
+						public void onResponse(JSONObject response) {
+							// TODO Auto-generated method stub
+							Log.d("CustomUTF8", response.toString());
+							ConfigApp.CURRENT_ROOM_DEFAULT = response;
 
-		if (!ConfigApp.goOut) {
-			layout_logchat
-					.addView(ConfigApp.arr_textViews[ConfigApp.msg_count]);
+							getMsgInJsonGlobal();
+							getMsgInJsonOwner();
+						}
+					}, new ErrorListener() {
+						@Override
+						public void onErrorResponse(VolleyError error) {
+							// TODO Auto-generated method stub
+							Log.d("CustomUTF8_ERROR", error.toString());
+						}
+					}) {
+				@Override
+				public Map<String, String> getHeaders() throws AuthFailureError {
+					Map<String, String> map = new HashMap<String, String>();
+					map.put("Authorization", ConfigApp.API_KEY);
+					return map;
+				}
+			};
+			AppController.getInstance().addToRequestQueue(request);
+		} catch (Exception ex) {
+			Toast.makeText(getActivity(), ex.toString(), Toast.LENGTH_SHORT)
+					.show();
 		}
+	}
 
-		scrollView_logchat.post(new Runnable() {
+	private void getMsgInJsonGlobal() {
+		Log.d("Chatroom: GetMsgJson", ConfigApp.CURRENT_ROOM_DEFAULT.toString());
+		try {
+			JSONArray array = ConfigApp.CURRENT_ROOM_DEFAULT.getJSONObject(
+					"msg").getJSONArray("global");
+
+			Log.d("-----------", array.toString());
+
+			for (int i = 0; i < array.length(); i++) {
+				JSONObject json = array.getJSONObject(i);
+				MessageItem item = new MessageItem();
+				item.setId(json.getString("idm"));
+				item.setUsername(json.getString("user"));
+				item.setMessage(json.getString("msg"));
+				item.setTime(json.getString("time"));
+				item.setType(1);
+				Log.d("ChatRoomFrag_GetMsgINJSON", item.getUsername() + ":"
+						+ item.getMessage());
+
+				if (json.has("answer")) {
+					item.setReply(true);
+					JSONArray repArray = json.getJSONArray("answer");
+					for (int j = 0; j < repArray.length(); j++) {
+						MessageItem itemR = new MessageItem();
+						JSONObject objectRep = repArray.getJSONObject(j);
+						itemR.setUsername(objectRep.getString("user"));
+						itemR.setMessage(objectRep.getString("msg"));
+						itemR.setTime(objectRep.getString("time"));
+						item.addReply(itemR);
+					}
+				}
+
+				// messageItems_global.add(item);
+				messageItems_global.insertElementAt(item, 0);
+
+			}
+			if (messageItems_global.size() > 0) {
+				adapter_global.notifyDataSetChanged();
+			}
+			// Collections.reverse(messageItems_global);
+			if (messageItems_global.size() > 0)
+				adapter_global.notifyDataSetChanged();
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private void getMsgInJsonOwner() {
+		try {
+			JSONArray array = ConfigApp.CURRENT_ROOM_DEFAULT.getJSONObject(
+					"msg").getJSONArray("owner");
+			for (int i = 0; i < array.length(); i++) {
+				JSONObject json = array.getJSONObject(i);
+				MessageItem item = new MessageItem();
+				item.setId(json.getString("idm"));
+				item.setUsername(json.getString("user"));
+				item.setMessage(json.getString("msg"));
+				item.setTime(json.getString("time"));
+				item.setType(1);
+
+				if (json.has("answer")) {
+					item.setReply(true);
+					JSONArray repArray = json.getJSONArray("answer");
+					for (int j = 0; j < repArray.length(); j++) {
+						MessageItem itemR = new MessageItem();
+						JSONObject objectRep = repArray.getJSONObject(j);
+						itemR.setUsername(objectRep.getString("user"));
+						itemR.setMessage(objectRep.getString("msg"));
+						itemR.setTime(objectRep.getString("time"));
+						item.addReply(itemR);
+					}
+				}
+
+				messageItems_owner.add(item);
+			}
+			Collections.reverse(messageItems_owner);
+			if (messageItems_owner.size() > 0)
+				adapter_owner.notifyDataSetChanged();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+
+	private void initTab() {
+		final TabHost tabHost = (TabHost) (rootView.findViewById(R.id.tabhost));
+		tabHost.setup();
+		TabHost.TabSpec tabSpec;
+		// Setup tab 1
+		tabSpec = tabHost.newTabSpec("tab01");
+		tabSpec.setContent(R.id.tab1);
+		tabSpec.setIndicator("Thảo luận");
+		tabHost.addTab(tabSpec);
+		// Setup tab 2
+		tabSpec = tabHost.newTabSpec("tab02");
+		tabSpec.setContent(R.id.tab2);
+		tabSpec.setIndicator("Chủ phòng");
+		tabHost.addTab(tabSpec);
+
+		tabHost.setCurrentTab(0);
+		tabHost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
 
 			@Override
-			public void run() {
+			public void onTabChanged(String tabId) {
 				// TODO Auto-generated method stub
-				scrollView_logchat.fullScroll(ScrollView.FOCUS_DOWN);
+				if (tabHost.getCurrentTab() == 0) {
+					room_type = 0;
+				} else {
+					room_type = 1;
+				}
 			}
 		});
+
+		TabWidget widget = tabHost.getTabWidget();
+		for (int i = 0; i < widget.getChildCount(); i++) {
+			View v = widget.getChildAt(i);
+			TextView tv = (TextView) v.findViewById(android.R.id.title);
+			tv.setTextColor(Color.parseColor("#FFFFFF"));
+		}
 	}
 
-	// CHatServer
-	public class ChatClientThread extends Thread {
+	// - - Initsocket chat
+	private void initSocketIoClient() {
+		try {
+			final JSONObject userProfile = ConfigApp.CURRENT_USER
+					.getJSONObject("profile");
+			Log.d("initSocketIoClient: ", userProfile.toString());
 
-		String name;
-		String dstAddress;
-		int dstPort;
+			// socket = IO.socket(ConfigApp.IP_SERVER_CHAT);
 
-		String msgToSend = "";
+			socket.on(Socket.EVENT_CONNECT, onConnect).on(Socket.EVENT_ERROR,
+					onError);
 
-		// boolean goOut = false;
+			// SetHeader
 
-		ChatClientThread(String name, String address, int port) {
-			this.name = name;
-			dstAddress = address;
-			dstPort = port;
+			socket.io().on(Manager.EVENT_TRANSPORT, new Emitter.Listener() {
+
+				@Override
+				public void call(Object... arg0) {
+					// TODO Auto-generated method stub
+					Transport transport = (Transport) arg0[0];
+					transport.on(Transport.EVENT_REQUEST_HEADERS,
+							new Emitter.Listener() {
+
+								@Override
+								public void call(Object... arg0) {
+									// TODO Auto-generated method stub
+									@SuppressWarnings("unchecked")
+									Map<String, String> header = (Map<String, String>) arg0[0];
+									try {
+										header.put("cookie", "PHPSESSID="
+												+ userProfile.getString("ssid"));
+										// header.put("Authorization",
+										// ConfigApp.API_KEY);
+									} catch (JSONException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								}
+							}).on(Transport.EVENT_RESPONSE_HEADERS,
+							new Emitter.Listener() {
+								@Override
+								public void call(Object... args) {
+									@SuppressWarnings("unchecked")
+									final Map<String, String> headers = (Map<String, String>) args[0];
+
+									// get cookies from server.
+								}
+							});
+
+				}
+			});
+			socket.connect();
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+	}
+
+	private Emitter.Listener onConnect = new Emitter.Listener() {
 
 		@Override
-		public void run() {
-			Socket socket = null;
-			DataOutputStream dataOutputStream = null;
-			DataInputStream dataInputStream = null;
-
-			try {
-				socket = new Socket(dstAddress, dstPort);
-				dataOutputStream = new DataOutputStream(
-						socket.getOutputStream());
-				dataInputStream = new DataInputStream(socket.getInputStream());
-				dataOutputStream.writeUTF(name);
-				dataOutputStream.flush();
-
-				while (!ConfigApp.goOut) {
-					if (dataInputStream.available() > 0) {
-						// msgLog += dataInputStream.readUTF();
-						final String msg_rec = dataInputStream.readUTF();
-						getActivity().runOnUiThread(new Runnable() {
-
-							@Override
-							public void run() {
-								receiveMessageToView(msg_rec);
-							}
-						});
-					}
-
-					if (!msgToSend.equals("")) {
-						dataOutputStream.writeUTF(msgToSend);
-						dataOutputStream.flush();
-						Log.e("Task", "dâttatatat");
-						msgToSend = "";
-					}
+		public void call(final Object... arg0) {
+			// TODO Auto-generated method stub
+			Log.d("Onconnection", "connect" + arg0.toString() + "-");
+			getActivity().runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					Toast.makeText(getActivity(),
+							"Connect: " + arg0.toString() + "-",
+							Toast.LENGTH_SHORT).show();
 				}
+			});
+		}
+	};
 
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-				final String eString = e.toString();
-				getActivity().runOnUiThread(new Runnable() {
+	private Emitter.Listener onError = new Emitter.Listener() {
 
-					@Override
-					public void run() {
-						Toast.makeText(getActivity(), eString,
-								Toast.LENGTH_LONG).show();
-					}
-
-				});
-			} catch (IOException e) {
-				e.printStackTrace();
-				final String eString = e.toString();
-				getActivity().runOnUiThread(new Runnable() {
-
-					@Override
-					public void run() {
-						Toast.makeText(getActivity(), eString,
-								Toast.LENGTH_LONG).show();
-					}
-
-				});
-			} finally {
-				if (socket != null) {
-					try {
-						socket.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+		@Override
+		public void call(final Object... arg0) {
+			// TODO Auto-generated method stub
+			getActivity().runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					// TODO Auto-generated method stub
+					Toast.makeText(getActivity(),
+							"Error: " + arg0[0].toString(), Toast.LENGTH_SHORT)
+							.show();
 				}
-
-				if (dataOutputStream != null) {
-					try {
-						dataOutputStream.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-
-				if (dataInputStream != null) {
-					try {
-						dataInputStream.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-
-				// getActivity().runOnUiThread(new Runnable() {
-				//
-				// @Override
-				// public void run() {
-				// // loginPanel.setVisibility(View.VISIBLE);
-				// // chatPanel.setVisibility(View.GONE);
-				// }
-				//
-				// });
-			}
+			});
 
 		}
+	};
 
-		private void sendMsg(String msg) {
-			msgToSend = msg;
-
+	//
+	private void attemptSendGlobal() {
+		if (!socket.connected())
+			return;
+		String msg = inputMsgGlobal.getText().toString().trim();
+		if (TextUtils.isEmpty(msg)) {
+			inputMsgGlobal.setError("*");
+			return;
 		}
-
-		public void disconnect() {
-			ConfigApp.goOut = true;
+		try {
+			final JSONObject userProfile = ConfigApp.CURRENT_USER
+					.getJSONObject("profile");
+			String userName = userProfile.getString("username");
+			java.text.DateFormat dateFormat = new SimpleDateFormat(
+					"HH:mm dd/MM/yyyy");
+			String time = dateFormat.format(Calendar.getInstance().getTime());
+			MessageItem item = new MessageItem();
+			item.setUsername(userName);
+			item.setMessage(msg);
+			item.setTime(time);
+			item.setId(userProfile.getString("id"));
+			messageItems_global.add(item);
+			adapter_global.notifyDataSetChanged();
+			inputMsgGlobal.setText("");
+			listViewChatLog_global.smoothScrollToPosition(adapter_global
+					.getCount() - 1);
+		} catch (JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public void onPause() {
+		// TODO Auto-generated method stub
+		super.onPause();
+		socket.disconnect();
+		socket.off(Socket.EVENT_CONNECT, onConnect);
+		socket.off(Socket.EVENT_ERROR, onError);
+	}
+	
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		// TODO Auto-generated method stub
+		super.onActivityResult(requestCode, resultCode, data);
 	}
 }

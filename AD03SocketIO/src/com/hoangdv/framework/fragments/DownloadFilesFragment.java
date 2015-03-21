@@ -7,11 +7,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.text.NumberFormat;
 import java.util.Random;
 import java.util.Vector;
 
-import android.app.ActionBar.Tab;
+import android.annotation.SuppressLint;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
@@ -36,7 +35,7 @@ import com.hoangdv.framework.models.NavDrawerItem;
  * @author Hoangdv
  * 
  */
-public class DownloadFilesFragment extends Fragment {
+@SuppressLint("NewApi") public class DownloadFilesFragment extends Fragment {
 	ListView listView;
 	NavDrawerListAdapter adapter = null;
 	Vector<NavDrawerItem> items = new Vector<NavDrawerItem>();
@@ -155,7 +154,7 @@ public class DownloadFilesFragment extends Fragment {
 	/**
 	 * DownloadFile thread
 	 */
-	class DownloadFileFromUrl extends AsyncTask<String, String, String> {
+	@SuppressLint("NewApi") class DownloadFileFromUrl extends AsyncTask<String, String, String> {
 		private int lengthOfFile;
 
 		@Override

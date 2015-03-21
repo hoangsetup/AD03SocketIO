@@ -2,6 +2,7 @@ package com.hoangdv.framework.fragments;
 
 import java.util.Vector;
 
+import android.annotation.SuppressLint;
 import android.app.Fragment;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -21,7 +22,7 @@ public class VbookFragment extends Fragment {
 	Vector<NavDrawerItem> items = new Vector<NavDrawerItem>();
 	NavDrawerListAdapter adapter = null;
 
-	@Override
+	@SuppressLint("NewApi") @Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 		// TODO Auto-generated method stub
@@ -40,7 +41,8 @@ public class VbookFragment extends Fragment {
 					long arg3) {
 				// TODO Auto-generated method stub
 				String url = "http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8";
-				SlideActivity.playVideoMain(url, getActivity());
+				//HH
+				//SlideActivity.playVideoMain(url, getActivity());
 			}
 		});
 		return rootView;

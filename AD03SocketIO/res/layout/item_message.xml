@@ -1,0 +1,50 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    android:background="@drawable/itemlistmsgselector" >
+
+    <TextView
+        android:id="@+id/textView_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:text="22:09 05-01-2015"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
+        android:id="@+id/username"
+        style="?android:textAppearanceMedium"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:singleLine="true"
+        android:text="Admin"
+        android:textColor="?android:textColorPrimary"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/textView_reply"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentRight="true"
+        android:layout_below="@+id/username"
+        android:text="'test - 23:00 05-02-2015: This is reply'"
+        android:textStyle="italic"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/textView_reply"
+        android:layout_alignRight="@+id/textView_reply"
+        android:layout_below="@+id/textView_reply"
+        android:text="This is Message!"
+        android:typeface="sans"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+</RelativeLayout>

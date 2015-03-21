@@ -75,8 +75,12 @@ public class MainActivity extends Activity {
 				// JSONObject userProfile = parseUser
 				// .getJSONObject(ConfigApp.PROFILE_KEY);
 				// Log.d("profile", userProfile.toString());
+				ConfigApp.CURRENT_ROOM_ID = items.get(arg2).getUserID();
+				
 				Intent intent = new Intent(MainActivity.this,
 						SlideActivity.class);
+				intent.putExtra("room", items.get(arg2));
+				
 				startActivityForResult(intent, 113);
 			}
 		});
@@ -143,6 +147,7 @@ public class MainActivity extends Activity {
 										.getBoolean(ConfigApp.IS_LIVE_KEY));
 								item.setUserID(object
 										.getString(ConfigApp.IDC_KEY));
+								
 								items.add(item);
 							}
 							adapter.notifyDataSetChanged();

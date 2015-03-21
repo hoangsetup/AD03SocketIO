@@ -1,0 +1,44 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
+
+    <LinearLayout
+        android:id="@+id/linearLayout_owner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="horizontal"
+        android:weightSum="10" >
+
+        <EditText
+            android:id="@+id/editText_msg_owner"
+            android:layout_width="0dp"
+            android:layout_height="32dp"
+            android:layout_weight="8"
+            android:background="@drawable/edittext_bg"
+            android:ems="10"
+            android:singleLine="false"
+            android:textColor="#FFF" />
+
+        <ImageButton
+            android:id="@+id/imageButton_send_owner"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:background="@drawable/button_style"
+            android:src="@drawable/ic_send" />
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/listView_chat_owner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/linearLayout_owner"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:divider="#00000000"
+        android:paddingTop="2dp"
+        android:dividerHeight="4dp" >
+    </ListView>
+
+</RelativeLayout>

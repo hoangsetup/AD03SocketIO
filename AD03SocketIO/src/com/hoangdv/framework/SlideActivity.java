@@ -5,6 +5,8 @@ import io.vov.vitamio.MediaPlayer.OnPreparedListener;
 import io.vov.vitamio.widget.MediaController;
 import io.vov.vitamio.widget.VideoView;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 
 import org.json.JSONException;
@@ -16,6 +18,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
@@ -34,7 +37,13 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request.Method;
+import com.android.volley.Response.ErrorListener;
+import com.android.volley.Response.Listener;
+import com.android.volley.AuthFailureError;
+import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageLoader;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.hoangdv.framework.adapters.NavDrawerListAdapter;
 import com.hoangdv.framework.app.AppController;
 import com.hoangdv.framework.fragments.ChatRoomFragment;
@@ -42,6 +51,7 @@ import com.hoangdv.framework.fragments.DownloadFilesFragment;
 import com.hoangdv.framework.fragments.VbookFragment;
 import com.hoangdv.framework.models.NavDrawerItem;
 import com.hoangdv.framework.utils.ConfigApp;
+import com.hoangdv.framework.utils.CustomRequest;
 
 @SuppressWarnings("deprecation")
 public class SlideActivity extends Activity {
@@ -63,9 +73,7 @@ public class SlideActivity extends Activity {
 	// Video
 	static VideoView videoview;
 	static MediaController mediacontroller;
-	String VideoURL = "http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8";
-	// String VideoURL =
-	// " http://devimages.apple.com/iphone/samples/bipbop/gear1/prog_index.m3u8";
+	static String VideoURL = "http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8";
 	static ProgressDialog dialog = null;
 
 	//
@@ -74,9 +82,77 @@ public class SlideActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_slider);
+
+		/*
+		 * Get thong tin phong
+		 */
+
+		try {
+			// HH
+			// dialog = ProgressDialog.show(this, "", "Loading...", true,
+			// false);
+
+			Log.e("ROOM", ConfigApp.CURRENT_ROOM_ID);
+
+			// Luu rooom id
+			// ConfigApp.CURRENT_ROOM_ID = room.getUserID();
+
+			JSONObject userProfile = ConfigApp.CURRENT_USER
+					.getJSONObject("profile");
+
+			JsonObjectRequest request = new JsonObjectRequest(Method.GET,
+					ConfigApp.URL_GET_LINKVIDEO_MSG + "/"
+							+ ConfigApp.CURRENT_ROOM_ID + "/"
+							+ userProfile.getString("id"), null,
+					new Listener<JSONObject>() {
+						@Override
+						public void onResponse(JSONObject response) {
+							// TODO Auto-generated method stub
+							if (dialog != null)
+								dialog.dismiss();
+							Log.d("Slider", response.toString());
+
+							// ConfigApp.CURRENT_ROOM_DEFAULT = response;
+
+							try {
+								playVideoMain(
+										response.getString("link_player"),
+										SlideActivity.this);
+
+							} catch (JSONException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
+					}, new ErrorListener() {
+						@Override
+						public void onErrorResponse(VolleyError error) {
+							// TODO Auto-generated method stub
+							if (dialog != null)
+								dialog.dismiss();
+						}
+					}) {
+				@Override
+				public Map<String, String> getHeaders() throws AuthFailureError {
+					// TODO Auto-generated method stub
+					Map<String, String> map = new HashMap<String, String>();
+					map.put("Authorization", ConfigApp.API_KEY);
+					map.put("Content-Type", "application/json");
+					map.put("charset", "utf-8");
+					return map;
+				}
+			};
+
+
+
+			
+			AppController.getInstance().addToRequestQueue(request);
+			videoview = (VideoView) findViewById(R.id.videoView_default);
+			// playVideoMain(VideoURL, SlideActivity.this);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 		//
-		videoview = (VideoView) findViewById(R.id.videoView_default);
-		playVideoMain(VideoURL, SlideActivity.this);
 
 		mTitle = mDrawerTitle = getTitle();
 
@@ -84,14 +160,14 @@ public class SlideActivity extends Activity {
 		mDrawerList = (ListView) findViewById(R.id.list_slidermenu);
 
 		navDrawerItems = new Vector<NavDrawerItem>();
-		// Profile
-		// ParseUser curentUser = ParseUser.getCurrentUser();
 
 		try {
 			JSONObject userProfile = ConfigApp.CURRENT_USER
 					.getJSONObject("profile");
+
 			ImageLoader imageLoader = AppController.getInstance()
 					.getImageLoader();
+
 			LayoutInflater inflater = (LayoutInflater) this
 					.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 			View headerView = inflater.inflate(R.layout.profile_layout,
@@ -106,9 +182,11 @@ public class SlideActivity extends Activity {
 			TextView tv_username = (TextView) headerView
 					.findViewById(R.id.textView_username);
 			tv_username.setText(userProfile.getString("username"));
+
 			imageLoader.get(userProfile.getString("image"), ImageLoader
 					.getImageListener(imageView, R.drawable.avata,
 							R.drawable.avata));
+
 			imageView.setImageResource(R.drawable.avata);
 			headerView.setOnClickListener(new OnClickListener() {
 
@@ -270,6 +348,11 @@ public class SlideActivity extends Activity {
 			break;
 		}
 
+		// HH25/Feb/2015
+		// while (dialog.isShowing()) {
+		//
+		// }
+
 		if (fragment != null) {
 			FragmentManager fragmentManager = getFragmentManager();
 			fragmentManager.beginTransaction()
@@ -278,7 +361,7 @@ public class SlideActivity extends Activity {
 			// update selected item and title, then close the drawer
 			mDrawerList.setItemChecked(position, true);
 			mDrawerList.setSelection(position);
-			setTitle(navDrawerItems.get(position).getTitle());
+			setTitle(navDrawerItems.get(position - 1).getTitle());
 			mDrawerLayout.closeDrawer(mDrawerList);
 		} else {
 			// error in creating fragment
@@ -345,7 +428,7 @@ public class SlideActivity extends Activity {
 			public void onPrepared(MediaPlayer mp) {
 				mediacontroller.setAnchorView(videoview);
 				mp.setLooping(true);
-				if (dialog.isShowing())
+				if (dialog != null)
 					dialog.dismiss();
 				// videoview.start();
 			}

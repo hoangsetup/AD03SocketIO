@@ -48,19 +48,10 @@ public class NormalUserLoginControler {
 											Toast.LENGTH_SHORT).show();
 								}
 							} else if (response.has("id")) {
-								// ParseUser currentUser = ParseUser
-								// .getCurrentUser();
-								//
-								// Log.d("ProfileNomarl", response.toString());
-								// currentUser.put("profile", response);
-								// currentUser.saveInBackground();
 
-
-								// ParseUser currentUser = new ParseUser();
-								
 								Log.d("ProfileNomarl", response.toString());
 								ConfigApp.CURRENT_USER.put("profile", response);
-								
+
 								Intent intent = new Intent(activity,
 										MainActivity.class);
 								activity.startActivity(intent);
@@ -77,6 +68,8 @@ public class NormalUserLoginControler {
 						// TODO Auto-generated method stub
 						Log.d(NormalUserLoginControler.class.getName(),
 								error.toString());
+						Toast.makeText(activity, error.toString(),
+								Toast.LENGTH_LONG).show();
 						if (dialog != null)
 							dialog.dismiss();
 					}
